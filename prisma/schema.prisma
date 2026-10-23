@@ -1,0 +1,180 @@
+// RentNest database schema (PostgreSQL + Prisma)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TENANT
+  LANDLORD
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  RENTED
+  UNAVAILABLE
+}
+
+enum RentalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum PaymentProvider {
+  STRIPE
+  SSLCOMMERZ
+}
+
+model User {
+  id        String     @id @default(uuid())
+  name      String
+  email     String     @unique
+  password  String
+  phone     String?
+  avatarUrl String?
+  role      Role       @default(TENANT)
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  properties     Property[]
+  rentalRequests RentalRequest[]
+  payments       Payment[]
+  reviews        Review[]
+
+  @@index([role])
+  @@index([status])
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  properties Property[]
+}
+
+model Property {
+  id          String         @id @default(uuid())
+  title       String
+  description String
+  address     String
+  city        String
+  price       Decimal        @db.Decimal(12, 2) // monthly rent
+  bedrooms    Int            @default(1)
+  bathrooms   Int            @default(1)
+  areaSqft    Int?
+  amenities   String[]
+  images      String[]
+  status      PropertyStatus @default(AVAILABLE)
+  landlordId  String
+  categoryId  String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  landlord       User            @relation(fields: [landlordId], references: [id], onDelete: Restrict)
+  category       Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  rentalRequests RentalRequest[]
+  reviews        Review[]
+
+  @@index([landlordId])
+  @@index([categoryId])
+  @@index([city])
+  @@index([status])
+  @@index([price])
+}
+
+model RentalRequest {
+  id             String       @id @default(uuid())
+  propertyId     String
+  tenantId       String
+  moveInDate     DateTime
+  durationMonths Int
+  message        String?
+  // Price snapshot taken at request time, so later listing edits never change what the tenant agreed to pay.
+  monthlyRent    Decimal      @db.Decimal(12, 2)
+  totalAmount    Decimal      @db.Decimal(12, 2)
+  status         RentalStatus @default(PENDING)
+  landlordNote   String?
+  respondedAt    DateTime?
+  activatedAt    DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  property Property  @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  tenant   User      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  payments Payment[]
+  review   Review?
+
+  @@index([propertyId])
+  @@index([tenantId])
+  @@index([status])
+}
+
+model Payment {
+  id                      String          @id @default(uuid())
+  transactionId           String          @unique
+  rentalRequestId         String
+  userId                  String
+  amount                  Decimal         @db.Decimal(12, 2)
+  currency                String          @default("usd")
+  method                  String?
+  provider                PaymentProvider @default(STRIPE)
+  status                  PaymentStatus   @default(PENDING)
+  providerSessionId       String?         @unique
+  providerPaymentIntentId String?
+  checkoutUrl             String?
+  failureReason           String?
+  paidAt                  DateTime?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  rentalRequest RentalRequest @relation(fields: [rentalRequestId], references: [id], onDelete: Restrict)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([rentalRequestId])
+  @@index([userId])
+  @@index([status])
+}
+
+model Review {
+  id              String   @id @default(uuid())
+  rentalRequestId String   @unique // one review per completed rental
+  propertyId      String
+  tenantId        String
+  rating          Int
+  comment         String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  rentalRequest RentalRequest @relation(fields: [rentalRequestId], references: [id], onDelete: Cascade)
+  property      Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant        User          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([propertyId])
+  @@index([tenantId])
+}

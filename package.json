@@ -1,0 +1,58 @@
+{
+  "name": "rentnest-backend",
+  "version": "1.0.0",
+  "description": "RentNest - rental property marketplace REST API",
+  "main": "dist/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx watch src/server.ts",
+    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "postinstall": "prisma generate",
+    "typecheck": "tsc --noEmit",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "seed": "tsx prisma/seed.ts",
+    "docs:generate": "tsx scripts/generate-docs.ts",
+    "test:e2e": "tsx scripts/e2e.ts",
+    "db:push": "prisma db push --skip-generate",
+    "vercel-build": "prisma generate && prisma db push --skip-generate"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.1",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.8",
+    "express": "^4.22.3",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.12.1",
+    "stripe": "^23.0.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.25",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^26.6.5",
+    "prisma": "^7.10.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "prisma@7.10.1": true,
+    "@prisma/engines@7.10.1": true
+  }
+}
